@@ -1,0 +1,155 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+      // ページの読み込みを待つ
+      window.addEventListener("DOMContentLoaded", init);
+
+      function init() {
+        // サイズを指定
+        const width = 1080;
+        const height = 600;
+
+        const canvasElement = document.querySelector("#myCanvas");
+        // レンダラーを作成
+        const renderer = new THREE.WebGLRenderer({
+          canvas: canvasElement,
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // シーンを作成
+        const scene = new THREE.Scene();
+
+        // カメラを作成
+        const camera = new THREE.PerspectiveCamera(
+          60,
+          window.innerWidth / window.innerHeight
+        );
+
+        // カメラの初期座標を設定
+        camera.position.set(0, 0, 1000);
+
+        let radian = 0; // カメラの回転角度（ラジアン）
+        const radius = 1000; // カメラの距離
+
+        // カメラコントローラーを作成
+        const controls = new THREE.OrbitControls(camera, canvasElement);
+
+        // 滑らかにカメラコントローラーを制御する
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.2;
+
+        // 平行光源を作成
+        const directionalLight = new THREE.DirectionalLight(0xffffff);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
+
+        // 月のマテリアルを作成
+        const moonMaterial = new THREE.MeshStandardMaterial({
+          map: new THREE.TextureLoader().load("imgs/moonmap1k.jpg"),
+        });
+
+        // 月の球体を作成
+        const moonGeometry = new THREE.SphereGeometry(80, 30, 30);
+        const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+        scene.add(moonMesh);
+
+        // マテリアルを作成
+        const material = new THREE.MeshStandardMaterial({
+          map: new THREE.TextureLoader().load("imgs/earthmap1k.jpg"),
+        });
+
+        // 球体の形状を作成します
+        const geometry = new THREE.SphereGeometry(300, 30, 30);
+        // 形状とマテリアルからメッシュを作成します
+        const earthMesh = new THREE.Mesh(geometry, material);
+        // シーンにメッシュを追加します
+        scene.add(earthMesh);
+
+        // 星屑を作成します (カメラの動きをわかりやすくするため)
+        createStarField();
+
+        /** 星屑を作成します */
+        function createStarField() {
+          // 頂点情報を格納する配列
+          const vertices = [];
+          // 1000 個の頂点を作成
+          for (let i = 0; i < 1000; i++) {
+            const x = 3000 * (Math.random() - 0.5);
+            const y = 3000 * (Math.random() - 0.5);
+            const z = 3000 * (Math.random() - 0.5);
+
+            vertices.push(x, y, z);
+          }
+
+          // 形状データを作成
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute(
+            "position",
+            new THREE.Float32BufferAttribute(vertices, 3)
+          );
+
+          // マテリアルを作成
+          const material = new THREE.PointsMaterial({
+            size: 10,
+            color: 0xffffff,
+          });
+
+          // 物体を作成
+          const mesh = new THREE.Points(geometry, material);
+          scene.add(mesh);
+        }
+
+
+        tick();
+
+        // 毎フレーム時に実行されるループイベントです
+        function tick() {
+          // 月の公転
+          const moonOrbitRadius = 600;
+          const moonOrbitSpeed = 0.01;
+          const moonRotationSpeed = 0.5;
+          radian += moonOrbitSpeed;
+          moonMesh.position.set(
+            earthMesh.position.x + Math.cos(radian) * moonOrbitRadius,
+            earthMesh.position.y,
+            earthMesh.position.z + Math.sin(radian) * moonOrbitRadius
+          );
+
+          // 月の自転
+          moonMesh.rotation.y += moonRotationSpeed;
+
+          // 地球は常に回転させておく
+          earthMesh.rotation.y += 0.03;
+
+          // カメラの視点を少しずつ回転させる
+          radian += 0.005;
+          const spherical = new THREE.Spherical(radius, Math.PI / 2, radian);
+          camera.position.setFromSpherical(spherical);
+          camera.lookAt(scene.position);
+
+          // カメラコントローラーを更新
+          controls.update();
+
+          // レンダリング
+          renderer.render(scene, camera);
+
+          requestAnimationFrame(tick);
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <style>
+      body {
+        margin: 0;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+    <canvas id="myCanvas"></canvas>
+  </body>
+</html>
